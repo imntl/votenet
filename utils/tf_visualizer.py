@@ -34,6 +34,12 @@ class Visualizer():
         for label, val in scalars.items():
             self.logger.scalar_summary(label, val, step)
 
+    def log_scalar(self, label, value, step):
+        self.logger.scalar_summary(label, value, step)
+    
+    def log_model(self, model, step):
+        self.logger.model_hist(model, step)
+
     # scatter plots
     def plot_current_points(self, points, disp_offset=10):
         pass

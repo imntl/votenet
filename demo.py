@@ -43,7 +43,12 @@ if __name__=='__main__':
     
     # Set file paths and dataset config
     demo_dir = os.path.join(BASE_DIR, 'demo_files') 
-    if FLAGS.dataset == 'sunrgbd':
+    if FLAGS.dataset == 'blender':
+        sys.path.append(os.path.join(ROOT_DIR, 'blender'))
+        from blender_detection_dataset import DC # dataset config
+        checkpoint_path = os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar')
+        pc_path = os.path.join(demo_dir, 'input_pc_blender.ply')
+    elif FLAGS.dataset == 'sunrgbd':
         sys.path.append(os.path.join(ROOT_DIR, 'sunrgbd'))
         from sunrgbd_detection_dataset import DC # dataset config
         checkpoint_path = os.path.join(demo_dir, 'pretrained_votenet_on_sunrgbd.tar')

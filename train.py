@@ -39,9 +39,15 @@ from pytorch_utils import BNMomentumScheduler
 from tf_visualizer import Visualizer as TfVisualizer
 from ap_helper import APCalculator, parse_predictions, parse_groundtruths
 
+from tqdm import tqdm
+import data
+from timeit import default_timer as timer
+
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', default='votenet', help='Model file name [default: votenet]')
-parser.add_argument('--dataset', default='sunrgbd', help='Dataset name. sunrgbd or scannet. [default: sunrgbd]')
+parser.add_argument('--dataset', default='blender', help='Dataset name. blender, sunrgbd or scannet. [default: blender]')
+parser.add_argument('--dataset_folder', default="abc3_5", help='Name of specific dataset dir. Only for blender [default: None]')
+parser.add_argument('--dataset_url', default=None, help='URL of specific dataset dir. [default: None]')
 parser.add_argument('--checkpoint_path', default=None, help='Model checkpoint path [default: None]')
 parser.add_argument('--log_dir', default='log', help='Dump dir to save model checkpoint [default: log]')
 parser.add_argument('--dump_dir', default=None, help='Dump dir to save sample outputs [default: None]')
@@ -56,8 +62,8 @@ parser.add_argument('--learning_rate', type=float, default=0.001, help='Initial 
 parser.add_argument('--weight_decay', type=float, default=0, help='Optimization L2 weight decay [default: 0]')
 parser.add_argument('--bn_decay_step', type=int, default=20, help='Period of BN decay (in epochs) [default: 20]')
 parser.add_argument('--bn_decay_rate', type=float, default=0.5, help='Decay rate for BN decay [default: 0.5]')
-parser.add_argument('--lr_decay_steps', default='80,120,160', help='When to decay the learning rate (in epochs) [default: 80,120,160]')
-parser.add_argument('--lr_decay_rates', default='0.1,0.1,0.1', help='Decay rates for lr decay [default: 0.1,0.1,0.1]')
+parser.add_argument('--lr_decay_steps', default='40,80,120,160', help='When to decay the learning rate (in epochs) [default: 40,80,120,160]')
+parser.add_argument('--lr_decay_rates', default='0.1,0.1,0.1,0.1', help='Decay rates for lr decay [default: 0.1,0.1,0.1,0.1]')
 parser.add_argument('--no_height', action='store_true', help='Do NOT use height signal in input.')
 parser.add_argument('--use_color', action='store_true', help='Use RGB color in input.')
 parser.add_argument('--use_sunrgbd_v2', action='store_true', help='Use V2 box labels for SUN RGB-D dataset')
@@ -102,15 +108,46 @@ LOG_FOUT.write(str(FLAGS)+'\n')
 def log_string(out_str):
     LOG_FOUT.write(out_str+'\n')
     LOG_FOUT.flush()
-    print(out_str)
+#    print(out_str)
 if not os.path.exists(DUMP_DIR): os.mkdir(DUMP_DIR)
 
 # Init datasets and dataloaders 
 def my_worker_init_fn(worker_id):
     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
+# Load dataset if necessary
+if FLAGS.dataset_url is not None:
+    if os.path.exists("/storage/data/blender_full/{}".format(FLAGS.dataset_folder)):
+        if not os.path.exists("/storage/data/blender_full/{}/test".format(FLAGS.dataset_folder)):
+            log_string("Remove Data")
+            print("Remove Data")
+            os.system("rm -r /storage/data/blender_full/{}".format(FLAGS.dataset_folder))
+            log_string("Load dataset from {}".format(FLAGS.dataset_url))
+            print("Load dataset from", FLAGS.dataset_url)
+            data.get_data(FLAGS.dataset_folder,FLAGS.dataset_url,"/storage/data/blender_full")
+            log_string("Dataset downloadet!")
+            print("Dataset downloadet!")
+        else:
+            print("Daten schon auf dem Server. Wuhuu!")
+    else:
+        log_string("Load dataset from {}".format(FLAGS.dataset_url))
+        print("Load dataset from", FLAGS.dataset_url)
+        data.get_data(FLAGS.dataset_folder,FLAGS.dataset_url,"/storage/data/blender_full")
+        log_string("Dataset downloadet!")
+        print("Dataset downloadet!")
+
+# Test if server right
+assert os.path.exists("/storage/data/richtig"), "Du befindest dich leider nicht auf dem richtigen Server!"
+
 # Create Dataset and Dataloader
-if FLAGS.dataset == 'sunrgbd':
+if FLAGS.dataset == 'blender':
+    sys.path.append(os.path.join(ROOT_DIR, 'blender'))
+    from blender_detection_dataset import BlenderDetectionVotesDataset, MAX_NUM_OBJ
+    from model_util_blender import BlenderDatasetConfig
+    DATASET_CONFIG = BlenderDatasetConfig()
+    TRAIN_DATASET = BlenderDetectionVotesDataset(data_folder=FLAGS.dataset_folder, root_dir='/storage/data/blender_full/', split_set='train',augment=True, use_height=(not FLAGS.no_height))
+    TEST_DATASET = BlenderDetectionVotesDataset(data_folder=FLAGS.dataset_folder, root_dir='/storage/data/blender_full/', split_set='test',augment=False, use_height=(not FLAGS.no_height))
+elif FLAGS.dataset == 'sunrgbd':
     sys.path.append(os.path.join(ROOT_DIR, 'sunrgbd'))
     from sunrgbd_detection_dataset import SunrgbdDetectionVotesDataset, MAX_NUM_OBJ
     from model_util_sunrgbd import SunrgbdDatasetConfig
@@ -137,12 +174,13 @@ elif FLAGS.dataset == 'scannet':
 else:
     print('Unknown dataset %s. Exiting...'%(FLAGS.dataset))
     exit(-1)
-print(len(TRAIN_DATASET), len(TEST_DATASET))
+
+print("Length Datasets:", len(TRAIN_DATASET), len(TEST_DATASET))
 TRAIN_DATALOADER = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
     shuffle=True, num_workers=4, worker_init_fn=my_worker_init_fn)
 TEST_DATALOADER = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE,
     shuffle=True, num_workers=4, worker_init_fn=my_worker_init_fn)
-print(len(TRAIN_DATALOADER), len(TEST_DATALOADER))
+print("Length Dataloader:", len(TRAIN_DATALOADER), len(TEST_DATALOADER))
 
 # Init the model and optimzier
 MODEL = importlib.import_module(FLAGS.model) # import network module
@@ -178,7 +216,15 @@ it = -1 # for the initialize value of `LambdaLR` and `BNMomentumScheduler`
 start_epoch = 0
 if CHECKPOINT_PATH is not None and os.path.isfile(CHECKPOINT_PATH):
     checkpoint = torch.load(CHECKPOINT_PATH)
-    net.load_state_dict(checkpoint['model_state_dict'])
+    if torch.cuda.device_count() > 1:
+        from collections import OrderedDict
+        new_state_dict = OrderedDict()
+        for key, value in checkpoint['model_state_dict'].items():
+            new_key = 'module.{}'.format(key)
+            new_state_dict[new_key] = value
+        net.load_state_dict(new_state_dict)
+    else:
+        net.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     start_epoch = checkpoint['epoch']
     log_string("-> loaded checkpoint %s (epoch: %d)"%(CHECKPOINT_PATH, start_epoch))
@@ -220,7 +266,7 @@ def train_one_epoch():
     adjust_learning_rate(optimizer, EPOCH_CNT)
     bnm_scheduler.step() # decay BN momentum
     net.train() # set model to training mode
-    for batch_idx, batch_data_label in enumerate(TRAIN_DATALOADER):
+    for batch_idx, batch_data_label in enumerate(tqdm(TRAIN_DATALOADER,ncols = 70, ascii=True)):
         for key in batch_data_label:
             batch_data_label[key] = batch_data_label[key].to(device)
 
@@ -257,9 +303,9 @@ def evaluate_one_epoch():
     ap_calculator = APCalculator(ap_iou_thresh=FLAGS.ap_iou_thresh,
         class2type_map=DATASET_CONFIG.class2type)
     net.eval() # set model to eval mode (for bn and dp)
-    for batch_idx, batch_data_label in enumerate(TEST_DATALOADER):
-        if batch_idx % 10 == 0:
-            print('Eval batch: %d'%(batch_idx))
+    for batch_idx, batch_data_label in enumerate(tqdm(TEST_DATALOADER,ncols = 70, ascii=True)):
+#        if batch_idx % 10 == 0:
+#            print('Eval batch: %d'%(batch_idx))
         for key in batch_data_label:
             batch_data_label[key] = batch_data_label[key].to(device)
         
@@ -308,7 +354,10 @@ def train(start_epoch):
     min_loss = 1e10
     loss = 0
     for epoch in range(start_epoch, MAX_EPOCH):
+        start_epoch = timer()
         EPOCH_CNT = epoch
+        log_string('')
+        print('**** EPOCH %03d ****' % (epoch))
         log_string('**** EPOCH %03d ****' % (epoch))
         log_string('Current learning rate: %f'%(get_current_lr(epoch)))
         log_string('Current BN decay momentum: %f'%(bnm_scheduler.lmbd(bnm_scheduler.last_epoch)))
@@ -317,8 +366,14 @@ def train(start_epoch):
         # REF: https://github.com/pytorch/pytorch/issues/5059
         np.random.seed()
         train_one_epoch()
+        training_time = (timer() - start_epoch)/60
+        TRAIN_VISUALIZER.log_scalar("Time for epoch",training_time,epoch) # label, value, step
         if EPOCH_CNT == 0 or EPOCH_CNT % 10 == 9: # Eval every 10 epochs
+            start_eval = timer()
+            print("****** EVAL ******")
             loss = evaluate_one_epoch()
+            eval_time = (timer() - start_eval)/60
+            TEST_VISUALIZER.log_scalar("Time for epoch",eval_time,epoch)
         # Save checkpoint
         save_dict = {'epoch': epoch+1, # after training one epoch, the start_epoch should be epoch+1
                     'optimizer_state_dict': optimizer.state_dict(),
@@ -329,6 +384,14 @@ def train(start_epoch):
         except:
             save_dict['model_state_dict'] = net.state_dict()
         torch.save(save_dict, os.path.join(LOG_DIR, 'checkpoint.tar'))
+        end_epoch = timer()
+        log_string('Time for epoch {}: {}'.format(epoch,end_epoch-start_epoch))
+        TRAIN_VISUALIZER.log_scalar("Time for whole epoch",(end_epoch-start_epoch)/60,epoch)
+        TRAIN_VISUALIZER.log_model(net,epoch)
 
 if __name__=='__main__':
     train(start_epoch)
+    if FLAGS.log_dir is not 'log':
+        data.zip_up(FLAGS.log_dir)
+    if FLAGS.dump_dir is not None:
+        data.zip_up(Flags.dump_dir)

@@ -27,19 +27,21 @@ def decode_scores(net, end_points, num_class, num_heading_bin, num_size_cluster,
     center = base_xyz + net_transposed[:,:,2:5] # (batch_size, num_proposal, 3)
     end_points['center'] = center
 
-    heading_scores = net_transposed[:,:,5:5+num_heading_bin]
-    heading_residuals_normalized = net_transposed[:,:,5+num_heading_bin:5+num_heading_bin*2]
+    heading_scores = net_transposed[:,:,5:5+3*num_heading_bin]
+    heading_scores = torch.reshape(heading_scores,(heading_scores.shape[0],heading_scores.shape[1],int(heading_scores.shape[2]/3),3))
+    heading_residuals_normalized = net_transposed[:,:,5+3*num_heading_bin:5+3*num_heading_bin*2]
+    heading_residuals_normalized = torch.reshape(heading_residuals_normalized,(heading_residuals_normalized.shape[0],heading_residuals_normalized.shape[1],int(heading_residuals_normalized.shape[2]/3),3))
     end_points['heading_scores'] = heading_scores # Bxnum_proposalxnum_heading_bin
     end_points['heading_residuals_normalized'] = heading_residuals_normalized # Bxnum_proposalxnum_heading_bin (should be -1 to 1)
     end_points['heading_residuals'] = heading_residuals_normalized * (np.pi/num_heading_bin) # Bxnum_proposalxnum_heading_bin
 
-    size_scores = net_transposed[:,:,5+num_heading_bin*2:5+num_heading_bin*2+num_size_cluster]
-    size_residuals_normalized = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster:5+num_heading_bin*2+num_size_cluster*4].view([batch_size, num_proposal, num_size_cluster, 3]) # Bxnum_proposalxnum_size_clusterx3
+    size_scores = net_transposed[:,:,5+3*num_heading_bin*2:5+3*num_heading_bin*2+num_size_cluster]
+    size_residuals_normalized = net_transposed[:,:,5+3*num_heading_bin*2+num_size_cluster:5+3*num_heading_bin*2+num_size_cluster*4].view([batch_size, num_proposal, num_size_cluster, 3]) # Bxnum_proposalxnum_size_clusterx3
     end_points['size_scores'] = size_scores
     end_points['size_residuals_normalized'] = size_residuals_normalized
     end_points['size_residuals'] = size_residuals_normalized * torch.from_numpy(mean_size_arr.astype(np.float32)).cuda().unsqueeze(0).unsqueeze(0)
 
-    sem_cls_scores = net_transposed[:,:,5+num_heading_bin*2+num_size_cluster*4:] # Bxnum_proposalx10
+    sem_cls_scores = net_transposed[:,:,5+3*num_heading_bin*2+num_size_cluster*4:] # Bxnum_proposalx10
     end_points['sem_cls_scores'] = sem_cls_scores
     return end_points
 
@@ -68,10 +70,10 @@ class ProposalModule(nn.Module):
     
         # Object proposal/detection
         # Objectness scores (2), center residual (3),
-        # heading class+residual (num_heading_bin*2), size class+residual(num_size_cluster*4)
+        # heading class+residual (3*num_heading_bin*2), size class+residual(num_size_cluster*4)
         self.conv1 = torch.nn.Conv1d(128,128,1)
         self.conv2 = torch.nn.Conv1d(128,128,1)
-        self.conv3 = torch.nn.Conv1d(128,2+3+num_heading_bin*2+num_size_cluster*4+self.num_class,1)
+        self.conv3 = torch.nn.Conv1d(128,2+3+3*num_heading_bin*2+num_size_cluster*4+self.num_class,1)
         self.bn1 = torch.nn.BatchNorm1d(128)
         self.bn2 = torch.nn.BatchNorm1d(128)
 
@@ -81,7 +83,7 @@ class ProposalModule(nn.Module):
             xyz: (B,K,3)
             features: (B,C,K)
         Returns:
-            scores: (B,num_proposal,2+3+NH*2+NS*4) 
+            scores: (B,num_proposal,2+3+3*NH*2+NS*4) 
         """
         if self.sampling == 'vote_fps':
             # Farthest point sampling (FPS) on votes
@@ -107,7 +109,7 @@ class ProposalModule(nn.Module):
         # --------- PROPOSAL GENERATION ---------
         net = F.relu(self.bn1(self.conv1(features))) 
         net = F.relu(self.bn2(self.conv2(net))) 
-        net = self.conv3(net) # (batch_size, 2+3+num_heading_bin*2+num_size_cluster*4, num_proposal)
+        net = self.conv3(net) # (batch_size, 2+3+3*num_heading_bin*2+num_size_cluster*4, num_proposal)
 
         end_points = decode_scores(net, end_points, self.num_class, self.num_heading_bin, self.num_size_cluster, self.mean_size_arr)
         return end_points

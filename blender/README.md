@@ -8,7 +8,7 @@
 
 2. Render all nessesary files. For more information see README.md in `blender_dataset_generator`
 
-    blender blend/abc.blend --python blender_generator.py
+    blender -t 0 -b blend/abc.blend --python blender_generator.py
 
 #### Prepare data ...
 ... by running

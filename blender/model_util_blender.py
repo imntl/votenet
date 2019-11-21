@@ -57,7 +57,9 @@ class BlenderDatasetConfig(object): # Should work
             return is class of int32 of 0,1,...,N-1 and a number such that
                 class*(2pi/N) + number = angle
         '''
-        class_id = 0
+        class_id = np.array((0,0,0))
+        assert 0 <= angle.any() , "One angle smaller than 0"
+        assert angle.any() <= 2*np.pi, "One angle bigger than 2*Pi"
         residual_angle = angle
 
         return class_id, residual_angle
@@ -65,13 +67,15 @@ class BlenderDatasetConfig(object): # Should work
     def class2angle(self, pred_cls, residual, to_label_format=True):
         ''' Inverse function to angle2class '''
         angle = residual
+        assert 0 <= angle.any() , "One angle smaller than 0"
+        assert angle.any() <= 2*np.pi, "One angle bigger than 2*Pi"
         return angle
 
     def param2obb(self, center, heading_class, heading_residual, size_class, size_residual):
         heading_angle = self.class2angle(heading_class, heading_residual)
         box_size = self.class2size(int(size_class), size_residual)
-        obb = np.zeros((7,))
+        obb = np.zeros((9,))
         obb[0:3] = center
         obb[3:6] = box_size
-        obb[6] = heading_angle*-1
+        obb[6:9] = np.dot(-1,heading_angle)
         return obb

@@ -26,6 +26,8 @@ sys.path.append(os.path.join(BASE_DIR, '../utils/'))
 import pc_util
 import sunrgbd_utils
 
+from tqdm import tqdm
+
 DEFAULT_TYPE_WHITELIST = ['bed','table','sofa','chair','toilet','desk','dresser','night_stand','bookshelf','bathtub']
 
 class sunrgbd_object(object):
@@ -197,8 +199,8 @@ def extract_sunrgbd_data(idx_filename, split, output_folder, num_point=20000,
     if not os.path.exists(output_folder):
         os.mkdir(output_folder)
 
-    for data_idx in data_idx_list:
-        print('------------- ', data_idx)
+    for data_idx in tqdm(range(len(dataset))):
+#        print('------------- ', data_idx)
         objects = dataset.get_label_objects(data_idx)
 
         # Skip scenes with 0 object

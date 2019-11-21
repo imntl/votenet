@@ -64,21 +64,20 @@ class BlenderDetectionVotesDataset(Dataset):
     #           |- 02
     #           |   |- ...
     #           |- ...
-    def __init__(self, data_folder='abc1', root_dir=None, split_set='train',
+    def __init__(self, data_folder='abc3', root_dir=None, split_set='train',
             num_points=20000, use_height=False, augment=False):
 
         assert(num_points<=50000)
         self.data_path = os.path.join(ROOT_DIR,
                             '../data/blender/{}/{}/'.format(data_folder,split_set))
         if root_dir is not None:
-            self.data_path = os.path.join(root_dir,split_set)
+            self.data_path = os.path.join(root_dir,data_folder,'{}/'.format(split_set))
 
         self.index = []
         for foldername in os.listdir(self.data_path):
-            if not foldername.endswith(".txt"):
-                for filename in os.listdir(os.path.join(self.data_path,foldername)):
-                    if filename.startswith("depth"):
-                        self.index.append([int(foldername),int('{:10.4}'.format(filename[5:]))])
+            for filename in os.listdir(os.path.join(self.data_path,foldername)):
+               if filename.endswith(".npy"):
+                   self.index.append([int(foldername),int('{:10.4}'.format(filename))])
         self.num_points = num_points
         self.augment = augment
         self.use_height = use_height
@@ -158,7 +157,7 @@ class BlenderDetectionVotesDataset(Dataset):
         # ------------------------------- LABELS ------------------------------
         box3d_centers = np.zeros((MAX_NUM_OBJ, 3))
         box3d_sizes = np.zeros((MAX_NUM_OBJ, 3))
-        angle_classes = np.zeros((MAX_NUM_OBJ,))
+        angle_classes = np.zeros((MAX_NUM_OBJ, 3))
         angle_residuals = np.zeros((MAX_NUM_OBJ,3))
         size_classes = np.zeros((MAX_NUM_OBJ,))
         size_residuals = np.zeros((MAX_NUM_OBJ, 3))
@@ -280,7 +279,6 @@ def write_oriented_bbox(scene_bbox, out_filename):
     scene = trimesh.scene.Scene()
     for box in scene_bbox:
         scene.add_geometry(convert_oriented_box_to_trimesh_fmt(box))        
-    
     mesh_list = trimesh.util.concatenate(scene.dump())
     # save to ply file    
     trimesh.io.export.export_mesh(mesh_list, out_filename, file_type='ply')
@@ -305,12 +303,13 @@ def get_sem_cls_statistics():
     print(sem_cls_cnt)
 
 if __name__=='__main__':
-    d = BlenderDetectionVotesDataset(root_dir='/tmp/dataset/', use_height=False, augment=False)
-    sample = d[205]
+    d = BlenderDetectionVotesDataset(root_dir='/tmp/', use_height=False, augment=False, data_folder='dataset')
+    print(len(d))
+    sample = d[0]
     print(sample['point_clouds'].shape, sample['vote_label'].shape, sample['vote_label_mask'].shape)
     pc_util.write_ply(sample['point_clouds'], 'pc.ply')
-    viz_box(sample)
-    viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
+#    viz_box(sample)
+#    viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
     viz_obb(sample['point_clouds'], sample['center_label'], sample['box_label_mask'],
         sample['heading_class_label'], sample['heading_residual_label'],
         sample['size_class_label'], sample['size_residual_label'])

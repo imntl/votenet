@@ -186,9 +186,47 @@ def roty(t):
     """Rotation about the y-axis."""
     c = np.cos(t)
     s = np.sin(t)
+    assert False, "Use new_roty from utils/box_util.py"
     return np.array([[c,  0,  s],
                     [0,  1,  0],
                     [-s, 0,  c]])
+
+def new_rotx(t):
+    """Rotation about the x-axis."""
+    if type(t) is not float:
+        t = -t[1]
+    c = np.cos(t)
+    s = np.sin(t)
+    return np.array([[1,  0,  0],
+                     [0,  c, -s],
+                     [0,  s,  c]])
+
+
+def new_roty(t):
+    """Rotation about the y-axis."""
+    if type(t) is not float:
+        t = t[0]
+    c = np.cos(t)
+    s = np.sin(t)
+    return np.array([[c,  0,  s],
+                     [0,  1,  0],
+                     [-s, 0,  c]])
+
+
+def new_rotz(t):
+    """Rotation about the z-axis."""
+    if type(t) is not float:
+        t = t[2]
+    c = np.cos(t)
+    s = np.sin(t)
+    return np.array([[c, -s,  0],
+                     [s,  c,  0],
+                     [0,  0,  1]])
+
+def new_rotxyz(t):
+    """Rotation about all 3 axis."""
+    rot = np.dot(new_rotz(t), np.dot(new_roty(t), new_rotx(t)))
+    return rot
 
 def roty_batch(t):
     """Rotation about the y-axis.
@@ -204,6 +242,7 @@ def roty_batch(t):
     output[...,1,1] = 1
     output[...,2,0] = -s
     output[...,2,2] = c
+    assert False, "Use different from utils/box_util.py"
     return output
 
 
@@ -214,15 +253,39 @@ def get_3d_box(box_size, heading_angle, center):
     '''
     R = roty(heading_angle)
     l,w,h = box_size
-    x_corners = [l/2,l/2,-l/2,-l/2,l/2,l/2,-l/2,-l/2];
-    y_corners = [h/2,h/2,h/2,h/2,-h/2,-h/2,-h/2,-h/2];
-    z_corners = [w/2,-w/2,-w/2,w/2,w/2,-w/2,-w/2,w/2];
+    x_corners = [l,l,-l,-l,l,l,-l,-l];
+    y_corners = [h,h,h,h,-h,-h,-h,-h];
+    z_corners = [w,-w,-w,w,w,-w,-w,w];
+#    x_corners = [l/2,l/2,-l/2,-l/2,l/2,l/2,-l/2,-l/2];
+#    y_corners = [h/2,h/2,h/2,h/2,-h/2,-h/2,-h/2,-h/2];
+#    z_corners = [w/2,-w/2,-w/2,w/2,w/2,-w/2,-w/2,w/2];
     corners_3d = np.dot(R, np.vstack([x_corners,y_corners,z_corners]))
     corners_3d[0,:] = corners_3d[0,:] + center[0];
     corners_3d[1,:] = corners_3d[1,:] + center[1];
     corners_3d[2,:] = corners_3d[2,:] + center[2];
     corners_3d = np.transpose(corners_3d)
+    assert False, "BITTE NICHT VERWENDEN. SIEHE utils/box/util.py:get_3d_box"
     return corners_3d
+
+def new_get_3d_box(center, size, heading_angle):
+    R = new_rotxyz(heading_angle)
+    assert isRotationMatrix(R), "Rotationsmatrix kaputt"
+    l,w,h = size
+    x_corners = [-l,l,l,-l,-l,l,l,-l]
+    y_corners = [w,w,-w,-w,w,w,-w,-w]
+    z_corners = [h,h,h,h,-h,-h,-h,-h]
+    corners_3d = np.dot(R, np.vstack([x_corners, y_corners, z_corners]))
+    corners_3d[0,:] += center[0]
+    corners_3d[1,:] += center[1]
+    corners_3d[2,:] += center[2]
+    return np.transpose(corners_3d)
+
+def isRotationMatrix(R) :
+    Rt = np.transpose(R)
+    shouldBeIdentity = np.dot(Rt, R)
+    I = np.identity(3, dtype = R.dtype)
+    n = np.linalg.norm(I - shouldBeIdentity)
+    return n < 1e-6
 
 def get_3d_box_batch(box_size, heading_angle, center):
     ''' box_size: [x1,x2,...,xn,3]
@@ -237,9 +300,12 @@ def get_3d_box_batch(box_size, heading_angle, center):
     w = np.expand_dims(box_size[...,1], -1)
     h = np.expand_dims(box_size[...,2], -1)
     corners_3d = np.zeros(tuple(list(input_shape)+[8,3]))
-    corners_3d[...,:,0] = np.concatenate((l/2,l/2,-l/2,-l/2,l/2,l/2,-l/2,-l/2), -1)
-    corners_3d[...,:,1] = np.concatenate((h/2,h/2,h/2,h/2,-h/2,-h/2,-h/2,-h/2), -1)
-    corners_3d[...,:,2] = np.concatenate((w/2,-w/2,-w/2,w/2,w/2,-w/2,-w/2,w/2), -1)
+    corners_3d[...,:,0] = np.concatenate((l,l,-l,-l,l,l,-l,-l), -1)
+    corners_3d[...,:,1] = np.concatenate((h,h,h,h,-h,-h,-h,-h), -1)
+    corners_3d[...,:,2] = np.concatenate((w,-w,-w,w,w,-w,-w,w), -1)
+#    corners_3d[...,:,0] = np.concatenate((l/2,l/2,-l/2,-l/2,l/2,l/2,-l/2,-l/2), -1)
+#    corners_3d[...,:,1] = np.concatenate((h/2,h/2,h/2,h/2,-h/2,-h/2,-h/2,-h/2), -1)
+#    corners_3d[...,:,2] = np.concatenate((w/2,-w/2,-w/2,w/2,w/2,-w/2,-w/2,w/2), -1)
     tlist = [i for i in range(len(input_shape))]
     tlist += [len(input_shape)+1, len(input_shape)]
     corners_3d = np.matmul(corners_3d, np.transpose(R, tuple(tlist)))

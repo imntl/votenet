@@ -118,13 +118,17 @@ def extract_blender_data_multi(data_dir, split = 'train', num_point=20000, # Ext
 
 def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, type_whitelist, save_votes):
     idx = dataset.index[data_idx]
+    # Skip if XX/XXXX_votes.npz already exists
+    if os.path.exists(os.path.join(data_dir, split, '{:02d}/{:04d}_votes.npz'.format(idx[0],idx[1]))): return 0
+
 #    print('------------- ', data_idx+1, ' von ' , len(dataset))
     objects = dataset.get_label_objects(data_idx)
 
     # Skip scenes with 0 object or 0 objects out of type_whitelist
     if (len(objects)==0 or \
         len([obj for obj in objects if obj.classname in type_whitelist])==0):
-            return 1
+        print(data_idx)
+        return 1
 
     object_list = []
     for obj in objects:
@@ -224,7 +228,7 @@ if __name__=='__main__': # Run the different things implemented in this file.
     parser.add_argument('--compute_median_size', action='store_true', help='Compute median 3D bounding box sizes for each class.')
     parser.add_argument('--gen_data', action='store_true', help='Generate dataset.')
     parser.add_argument('--gen_data_multi', action='store_true', help='Generate dataset with multiple processor cores.')
-    parser.add_argument('--data_dir', default='/tmp/dataset/', action='store_true', help='Path to dataset.')
+    parser.add_argument('--data_dir', default='/storage/data/blender_full/abc3_5/', help='Path to dataset.')
     args = parser.parse_args()
 
     if args.compute_median_size:
@@ -233,8 +237,8 @@ if __name__=='__main__': # Run the different things implemented in this file.
 
     if args.gen_data:
         extract_blender_data(args.data_dir, split = 'train', save_votes = True)
-#        extract_blender_data(args.data_dir, split = 'test', save_votes = True)
+        extract_blender_data(args.data_dir, split = 'test', save_votes = True)
 
     if args.gen_data_multi:
         extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True)
-#        extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)
+        extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)

@@ -107,20 +107,26 @@ class BLENDER_Calibration(object):
     def __init__(self, calib_filepath):
         lines = [line.rstrip() for line in open(calib_filepath)] # Array with entries of each line as string
         Rtilt = np.array([float(x) for x in lines[0].split(' ')]) # First line as array with delimiter ' '
-        self.Rtilt = np.reshape(Rtilt, (3,3), order='F') # Reshape first line to 3x3 array
+        self.Rtilt = np.reshape(Rtilt, (4,4), order='F') # Reshape first line to 3x3 array
         K = np.array([float(x) for x in lines[1].split(' ')]) # Second line as array wit delimiter ' '
         self.K = np.reshape(K, (3,3), order='F') # Reshape second line to 3x3 array
         self.f_u = self.K[0,0]
         self.f_v = self.K[1,1]
         self.c_u = self.K[0,2]
         self.c_v = self.K[1,2]
+
+    def project_camera_to_global(self, pc):
+        pc2 = np.dot(np.transpose(np.linalg.inv(self.Rtilt[0:3,0:3])),np.transpose(pc[:,0:3])) #(3,n)
+        pc2 = np.transpose(pc2)
+        pc2 = np.subtract(pc2,self.Rtilt[3,0:3])
+        return pc2
    
     def project_upright_depth_to_camera(self, pc):
         ''' project point cloud from depth coord to camera coordinate
             Input: (N,3) Output: (N,3)
         '''
         # Project upright depth to depth coordinate
-        pc2 = np.dot(np.transpose(self.Rtilt), np.transpose(pc[:,0:3])) # (3,n)
+        pc2 = np.dot(np.transpose(self.Rtilt[0:3,0:3]), np.transpose(pc[:,0:3])) # (3,n)
         return flip_axis_to_camera(np.transpose(pc2))
 
     def project_upright_depth_to_image(self, pc):
@@ -231,7 +237,8 @@ def load_depth_image(img_filename,calib):
                 y = 0
             pic_3d.append([x,y,-z])
 
-    return np.array(pic_3d)
+    depth_pc = np.array(pic_3d)
+    return calib.project_camera_to_global(depth_pc)
 
 def load_depth_points(depth_filename):
     depth = np.loadtxt(depth_filename)
