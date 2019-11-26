@@ -37,7 +37,9 @@ Install the following Python dependencies (with `pip install`):
     matplotlib
     opencv-python
     plyfile
-    'trimesh>=2.35.39,<2.35.40'
+    trimesh
+
+If problems with trimesh occure, see blender/blender_detection_dataset.py:279
 
 ## Run demo
 

@@ -228,7 +228,7 @@ if __name__=='__main__': # Run the different things implemented in this file.
     parser.add_argument('--compute_median_size', action='store_true', help='Compute median 3D bounding box sizes for each class.')
     parser.add_argument('--gen_data', action='store_true', help='Generate dataset.')
     parser.add_argument('--gen_data_multi', action='store_true', help='Generate dataset with multiple processor cores.')
-    parser.add_argument('--data_dir', default='/storage/data/blender_full/abc3_5/', help='Path to dataset.')
+    parser.add_argument('--data_dir', default='/storage/data/blender_full/abc6/', help='Path to dataset.')
     args = parser.parse_args()
 
     if args.compute_median_size:
@@ -241,4 +241,4 @@ if __name__=='__main__': # Run the different things implemented in this file.
 
     if args.gen_data_multi:
         extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True)
-        extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)
+    #    extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)

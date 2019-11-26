@@ -276,12 +276,12 @@ def write_oriented_bbox(scene_bbox, out_filename):
         box_trimesh_fmt = trimesh.creation.box(lengths, trns)
         return box_trimesh_fmt
 
-    scene = trimesh.scene.Scene()
+    scene = trimesh.scene.scene.Scene()
     for box in scene_bbox:
-        scene.add_geometry(convert_oriented_box_to_trimesh_fmt(box))        
+        scene.add_geometry(convert_oriented_box_to_trimesh_fmt(box)) 
     mesh_list = trimesh.util.concatenate(scene.dump())
     # save to ply file    
-    trimesh.io.export.export_mesh(mesh_list, out_filename, file_type='ply')
+    mesh_list.export(file_obj=out_filename,file_type='ply')
     
     return
 
@@ -303,13 +303,11 @@ def get_sem_cls_statistics():
     print(sem_cls_cnt)
 
 if __name__=='__main__':
-    d = BlenderDetectionVotesDataset(root_dir='/tmp/', use_height=False, augment=False, data_folder='dataset')
+    d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
     print(len(d))
     sample = d[0]
     print(sample['point_clouds'].shape, sample['vote_label'].shape, sample['vote_label_mask'].shape)
     pc_util.write_ply(sample['point_clouds'], 'pc.ply')
-#    viz_box(sample)
-#    viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
-    viz_obb(sample['point_clouds'], sample['center_label'], sample['box_label_mask'],
-        sample['heading_class_label'], sample['heading_residual_label'],
-        sample['size_class_label'], sample['size_residual_label'])
+    viz_box(sample)
+    viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
+    viz_obb(sample['point_clouds'], sample['center_label'], sample['box_label_mask'], sample['heading_class_label'], sample['heading_residual_label'], sample['size_class_label'], sample['size_residual_label'])

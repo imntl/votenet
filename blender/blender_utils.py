@@ -62,9 +62,9 @@ class BlenderObject3d(object):
         self.cy = data[2]
         self.cz = data[3]
         self.centroid = [self.cx,self.cy,self.cz]
-        self.w = data[4]/3.75
-        self.l = data[5]/3.75
-        self.h = data[6]/3.9
+        self.w = data[4]/1.9
+        self.l = data[5]/1.9
+        self.h = data[6]/1.9
         # Heading angle is radian with values between 0 and 2π for each euler angle
         self.heading_angle = [data[7],data[8],data[9]]
         self.heading_angle = [(i%(2*np.pi)) for i in self.heading_angle] 
@@ -116,10 +116,13 @@ class BLENDER_Calibration(object):
         self.c_v = self.K[1,2]
 
     def project_camera_to_global(self, pc):
-        pc2 = np.dot(np.transpose(np.linalg.inv(self.Rtilt[0:3,0:3])),np.transpose(pc[:,0:3])) #(3,n)
-        pc2 = np.transpose(pc2)
-        pc2 = np.subtract(pc2,self.Rtilt[3,0:3])
-        return pc2
+        pc1 = np.transpose(pc)
+        pc_shape = pc1.shape[1]
+        pc2 = np.ones((4,pc_shape))
+        pc2[0:3,:] = pc1
+        pc3 = np.dot(self.Rtilt,pc2)
+        pc3 = np.transpose(pc3)
+        return pc3[:,0:3]
    
     def project_upright_depth_to_camera(self, pc):
         ''' project point cloud from depth coord to camera coordinate
@@ -164,7 +167,7 @@ class BLENDER_Calibration(object):
 def rotx(t):
     """Rotation about the x-axis."""
     if type(t) is not float:
-        t = -t[1]
+        t = t[0]
     c = np.cos(t)
     s = np.sin(t)
     return np.array([[1,  0,  0],
@@ -175,7 +178,7 @@ def rotx(t):
 def roty(t):
     """Rotation about the y-axis."""
     if type(t) is not float:
-        t = t[0]
+        t = t[1]
     c = np.cos(t)
     s = np.sin(t)
     return np.array([[c,  0,  s],
@@ -220,25 +223,38 @@ def read_blender_label(label_filename):
     objects = [BlenderObject3d(line) for line in lines] # Array with all objects of scene
     return objects
 
+def load_depth_image_old(img_filename,calib):
+    im = io.imread(img_filename)
+    uv_depth = []
+    for index_y, row in enumerate(im):
+        for index_x,value in enumerate(row):
+            uv_depth.append([index_x,index_y,-(((value/65536)*10)+1)])
+    uv_depth = np.array(uv_depth)
+    depth_pc = calib.project_image_to_camera(uv_depth)
+    depth_pc = calib.project_camera_to_global(depth_pc)
+    return depth_pc
+
 def load_depth_image(img_filename,calib):
     im = io.imread(img_filename)
     pic_3d = []
-    for index_x, row in enumerate(im):
-        for index_y, value in enumerate(row):
-            z = (im[index_x,index_y]/65025)
-            adj = (((calib.f_u + calib.f_v)/2)/((calib.c_u + calib.c_v)/2))
-#            if z > 0.99: continue
-            if z != 0:
-                x = ((index_x - calib.c_u) * z / calib.f_u) * 1.25
-                y = ((index_y - calib.c_v) * z / calib.f_v) * 1.25
-                z = z * adj * 1.24
-            else:
-                x = 0
-                y = 0
-            pic_3d.append([x,y,-z])
+    for index_y, row in enumerate(im):
+        for index_x, value in enumerate(row):
+            depth = ((value/65536)*10)+1
+            x = -((0.5 - (float(index_x) / float(calib.c_u * 2))) / calib.f_u)
+            y = ((0.5 - (float(index_y) / float(calib.c_u * 2))) / calib.f_u)
+            #x = ((index_x - calib.c_u) * z / calib.f_u)
+            #y = ((index_y - calib.c_v) * z / calib.f_v)
+            z = -1.0
+            norm = np.sqrt(x**2 + y**2 + z**2)
+            if depth != 0:
+                x = depth * x * 2 * calib.c_u / norm
+                y = depth * y * 2 * calib.c_u / norm
+                z = depth * z / norm
+                pic_3d.append([x,y,z])
 
     depth_pc = np.array(pic_3d)
-    return calib.project_camera_to_global(depth_pc)
+    depth_pc = calib.project_camera_to_global(depth_pc)
+    return depth_pc
 
 def load_depth_points(depth_filename):
     depth = np.loadtxt(depth_filename)
