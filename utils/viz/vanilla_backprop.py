@@ -25,7 +25,7 @@ class VanillaBackprop():
             self.gradients = grad_in[0]
 
         # Register hook to the first layer
-        first_layer = list(self.model.features._modules.items())[0][1]
+        first_layer = list(self.model.backbone_net._modules.items())[0][1]
         first_layer.register_backward_hook(hook_function)
 
     def generate_gradients(self, input_image, target_class):
