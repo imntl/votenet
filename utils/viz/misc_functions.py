@@ -13,6 +13,8 @@ import torch
 from torch.autograd import Variable
 from torchvision import models
 
+import ../pc_util as pc_util
+
 
 def convert_to_grayscale(im_as_arr):
     """
@@ -48,6 +50,21 @@ def save_gradient_images(gradient, file_name):
     # Save image
     path_to_file = os.path.join('../results', file_name + '.jpg')
     save_image(gradient, path_to_file)
+
+
+def save_gradient_pointcloud(pointcloud, gradient, file_name):
+    """
+        Exports the original gradient as colored pointcloud
+
+    Args:
+        pointcloud (np arr): Numpy array of the pointcloud with shape (N,3)
+        gradient (np arr): Numpy array of the gradient with shape (3,N)
+        file_name (str): File name to be exported
+    """
+    if not os.pat.exists('../../results'):
+        os.makedirs('../../results')
+    # Save ply
+    path_to_file = os.path.join('../../results', pc_rgb + file_name + '.ply')
 
 
 def save_class_activation_images(org_img, activation_map, file_name):
