@@ -308,6 +308,10 @@ if __name__=='__main__':
     sample = d[0]
     print(sample['point_clouds'].shape, sample['vote_label'].shape, sample['vote_label_mask'].shape)
     pc_util.write_ply(sample['point_clouds'], 'pc.ply')
+    shape = sample['point_clouds'].shape
+    color = np.zeros(shape)
+    color[:,1] = 255
+    pc_util.write_ply_rgb(sample['point_clouds'], color, 'pc_rgb.ply')
     viz_box(sample)
     viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
     viz_obb(sample['point_clouds'], sample['center_label'], sample['box_label_mask'], sample['heading_class_label'], sample['heading_residual_label'], sample['size_class_label'], sample['size_residual_label'])
