@@ -42,13 +42,13 @@ def save_gradient_images(gradient, file_name):
         gradient (np arr): Numpy array of the gradient with shape (3, 224, 224)
         file_name (str): File name to be exported
     """
-    if not os.path.exists('../results'):
-        os.makedirs('../results')
+    if not os.path.exists('results'):
+        os.makedirs('results')
     # Normalize
     gradient = gradient - gradient.min()
     gradient /= gradient.max()
     # Save image
-    path_to_file = os.path.join('../results', file_name + '.jpg')
+    path_to_file = os.path.join('results', file_name + '.jpg')
     save_image(gradient, path_to_file)
 
 
@@ -61,10 +61,11 @@ def save_gradient_pointcloud(pointcloud, gradient, file_name):
         gradient (np arr): Numpy array of the gradient with shape (3,N)
         file_name (str): File name to be exported
     """
-    if not os.pat.exists('../../results'):
-        os.makedirs('../../results')
+    if not os.pat.exists('results'):
+        os.makedirs('results')
     # Save ply
-    path_to_file = os.path.join('../../results', pc_rgb + file_name + '.ply')
+    path_to_file = os.path.join('results', 'pc_rgb' + file_name + '.ply')
+    pc_util.write_ply_rgb(pointcloud, gradient, path_to_file)
 
 
 def save_class_activation_images(org_img, activation_map, file_name):
@@ -76,18 +77,18 @@ def save_class_activation_images(org_img, activation_map, file_name):
         activation_map (numpy arr): Activation map (grayscale) 0-255
         file_name (str): File name of the exported image
     """
-    if not os.path.exists('../results'):
-        os.makedirs('../results')
+    if not os.path.exists('results'):
+        os.makedirs('results')
     # Grayscale activation map
     heatmap, heatmap_on_image = apply_colormap_on_image(org_img, activation_map, 'hsv')
     # Save colored heatmap
-    path_to_file = os.path.join('../results', file_name+'_Cam_Heatmap.png')
+    path_to_file = os.path.join('results', file_name+'_Cam_Heatmap.png')
     save_image(heatmap, path_to_file)
     # Save heatmap on iamge
-    path_to_file = os.path.join('../results', file_name+'_Cam_On_Image.png')
+    path_to_file = os.path.join('results', file_name+'_Cam_On_Image.png')
     save_image(heatmap_on_image, path_to_file)
     # SAve grayscale heatmap
-    path_to_file = os.path.join('../results', file_name+'_Cam_Grayscale.png')
+    path_to_file = os.path.join('results', file_name+'_Cam_Grayscale.png')
     save_image(activation_map, path_to_file)
 
 
