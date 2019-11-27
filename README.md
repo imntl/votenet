@@ -56,6 +56,21 @@ You can also run the following command to use another pretrained model on a Scan
 
 Detection results will be dumped to `demo_files/scannet_results`.
 
+### Misuse of the demo to get gradient information
+
+To look into the model and see more visualizations of the different parts, you can run the demo on one file and use it to have some nice images from the visualizations suite of 
+
+    https://github.com/utkuozbulak/pytorch-cnn-visualizations
+
+To run for example the `vanilla_backprob` you can use the following command on a pretrained model on a synthesized blender dataset:
+
+    python demo.py --viz vanillabackprop --sample 0
+
+#### Visualizations flags
+
+- vanillabackprob
+
+
 ## Training and evaluating
 
 ### Data preparation
@@ -63,6 +78,8 @@ Detection results will be dumped to `demo_files/scannet_results`.
 For SUN RGB-D, follow the [README](https://github.com/facebookresearch/votenet/blob/master/sunrgbd/README.md) under the `sunrgbd` folder.
 
 For ScanNet, follow the [README](https://github.com/facebookresearch/votenet/blob/master/scannet/README.md) under the `scannet` folder.
+
+For Blender, follow the `README` under the `blender` folder.
 
 ### Train and test on SUN RGB-D
 

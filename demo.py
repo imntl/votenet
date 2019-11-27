@@ -14,8 +14,11 @@ import importlib
 import time
 
 parser = argparse.ArgumentParser()
-parser.add_argument('--dataset', default='sunrgbd', help='Dataset: sunrgbd or scannet [default: sunrgbd]')
+parser.add_argument('--dataset', default='blender', help='Dataset: sunrgbd or scannet [default: blender]')
 parser.add_argument('--num_point', type=int, default=20000, help='Point Number [default: 20000]')
+parser.add_argument('--preprocess_pc', action=store_false, help='Pointcloud preprocessing [default: False]')
+parser.add_argument('--viz', default=None, help='Visualisation: vanilla backprop, or many others. If None, there is no viz. [default: None]')
+parser.add_argument('--sample', type=int, default=0, help='Number of sample in dataset used for viz [default: 0]')
 FLAGS = parser.parse_args()
 
 import torch
@@ -28,6 +31,10 @@ sys.path.append(os.path.join(ROOT_DIR, 'utils'))
 sys.path.append(os.path.join(ROOT_DIR, 'models'))
 from pc_util import random_sampling, read_ply
 from ap_helper import parse_predictions
+
+sys.path.append(os.path.join(ROOT_DIR, 'utils', 'viz'))
+from vanilla_backprop import VanillaBackprop
+import misc_functions as helper
 
 def preprocess_point_cloud(point_cloud):
     ''' Prepare the numpy point cloud (N,3) for forward pass '''
@@ -46,6 +53,7 @@ if __name__=='__main__':
     if FLAGS.dataset == 'blender':
         sys.path.append(os.path.join(ROOT_DIR, 'blender'))
         from blender_detection_dataset import DC # dataset config
+        assert os.isfile(os.path.join(demo_dir, 'input_pc_blender.ply')), "The checkpoint must be stored under {}".format(os.path.join(demo_dir, 'input_pc_blender.ply'))
         checkpoint_path = os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar')
         pc_path = os.path.join(demo_dir, 'input_pc_blender.ply')
     elif FLAGS.dataset == 'sunrgbd':
@@ -62,9 +70,7 @@ if __name__=='__main__':
         print('Unkown dataset %s. Exiting.'%(DATASET))
         exit(-1)
 
-    eval_config_dict = {'remove_empty_box': True, 'use_3d_nms': True, 'nms_iou': 0.25,
-        'use_old_type_nms': False, 'cls_nms': False, 'per_class_proposal': False,
-        'conf_thresh': 0.5, 'dataset_config': DC}
+    eval_config_dict = {'remove_empty_box': True, 'use_3d_nms': True, 'nms_iou': 0.25, 'use_old_type_nms': False, 'cls_nms': False, 'per_class_proposal': False, 'conf_thresh': 0.5, 'dataset_config': DC}
 
     # Init the model and optimzier
     MODEL = importlib.import_module('votenet') # import network module
@@ -84,24 +90,41 @@ if __name__=='__main__':
     epoch = checkpoint['epoch']
     print("Loaded checkpoint %s (epoch: %d)"%(checkpoint_path, epoch))
    
-    # Load and preprocess input point cloud 
-    net.eval() # set model to eval mode (for bn and dp)
-    point_cloud = read_ply(pc_path)
-    pc = preprocess_point_cloud(point_cloud)
-    print('Loaded point cloud data: %s'%(pc_path))
-   
-    # Model inference
-    inputs = {'point_clouds': torch.from_numpy(pc).to(device)}
-    tic = time.time()
-    with torch.no_grad():
-        end_points = net(inputs)
-    toc = time.time()
-    print('Inference time: %f'%(toc-tic))
-    end_points['point_clouds'] = inputs['point_clouds']
-    pred_map_cls = parse_predictions(end_points, eval_config_dict)
-    print('Finished detection. %d object detected.'%(len(pred_map_cls[0])))
-  
-    dump_dir = os.path.join(demo_dir, '%s_results'%(FLAGS.dataset))
-    if not os.path.exists(dump_dir): os.mkdir(dump_dir) 
-    MODEL.dump_results(end_points, dump_dir, DC, True)
-    print('Dumped detection results to folder %s'%(dump_dir))
+    if FLAGS.viz == None:
+        # Load and preprocess input point cloud 
+        net.eval() # set model to eval mode (for bn and dp)
+        point_cloud = read_ply(pc_path)
+        if FLAGS.preprocess_pc: pc = preprocess_point_cloud(point_cloud)
+        print('Loaded point cloud data: %s'%(pc_path))
+    
+        # Model inference
+        inputs = {'point_clouds': torch.from_numpy(pc).to(device)}
+        tic = time.time()
+        with torch.no_grad():
+            end_points = net(inputs)
+        toc = time.time()
+        print('Inference time: %f'%(toc-tic))
+        end_points['point_clouds'] = inputs['point_clouds']
+        pred_map_cls = parse_predictions(end_points, eval_config_dict)
+        print('Finished detection. %d object detected.'%(len(pred_map_cls[0])))
+    
+        dump_dir = os.path.join(demo_dir, '%s_results'%(FLAGS.dataset))
+        if not os.path.exists(dump_dir): os.mkdir(dump_dir) 
+        MODEL.dump_results(end_points, dump_dir, DC, True)
+        print('Dumped detection results to folder %s'%(dump_dir))
+
+    if FLAGS.viz not None:
+        assert (FLAGS.dataset == 'blender'), "Visualization does only work for the blender dataset. If you want to use it for more, please implement first!"
+        net.train()
+        d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
+        print(len(d))
+        sample = d[FLAGS.sample]
+
+        if FLAGS.viz == "vanillabackprop":
+            # Vanilla backprop
+            VBP = VanillaBackprop(net)
+            # Generate gradients
+            vanilla_grads = VBP.generate_gradients_votenet(sample,DC)
+            # Save colord gradients
+            helper.save_gradient_pointcloud(sample['point_clouds'], vanilla_grads, 'vanilla')
+            print('Vanilla backprop completed')
