@@ -4,6 +4,7 @@ Created on Thu Oct 21 11:09:09 2017
 @author: Utku Ozbulak - github.com/utkuozbulak
 """
 import os
+import sys
 import copy
 import numpy as np
 from PIL import Image
@@ -13,7 +14,10 @@ import torch
 from torch.autograd import Variable
 from torchvision import models
 
-import ../pc_util as pc_util
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+ROOT_DIR = os.path.dirname(BASE_DIR)
+sys.path.append(os.path.join(ROOT_DIR, 'utils'))
+import pc_util
 
 
 def convert_to_grayscale(im_as_arr):

@@ -16,7 +16,7 @@ import time
 parser = argparse.ArgumentParser()
 parser.add_argument('--dataset', default='blender', help='Dataset: sunrgbd or scannet [default: blender]')
 parser.add_argument('--num_point', type=int, default=20000, help='Point Number [default: 20000]')
-parser.add_argument('--preprocess_pc', action=store_false, help='Pointcloud preprocessing [default: False]')
+parser.add_argument('--preprocess_pc', action='store_false', help='Pointcloud preprocessing [default: False]')
 parser.add_argument('--viz', default=None, help='Visualisation: vanilla backprop, or many others. If None, there is no viz. [default: None]')
 parser.add_argument('--sample', type=int, default=0, help='Number of sample in dataset used for viz [default: 0]')
 FLAGS = parser.parse_args()
@@ -53,7 +53,7 @@ if __name__=='__main__':
     if FLAGS.dataset == 'blender':
         sys.path.append(os.path.join(ROOT_DIR, 'blender'))
         from blender_detection_dataset import DC # dataset config
-        assert os.isfile(os.path.join(demo_dir, 'input_pc_blender.ply')), "The checkpoint must be stored under {}".format(os.path.join(demo_dir, 'input_pc_blender.ply'))
+        assert os.path.isfile(os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar')), "The checkpoint must be stored under {}".format(os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar'))
         checkpoint_path = os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar')
         pc_path = os.path.join(demo_dir, 'input_pc_blender.ply')
     elif FLAGS.dataset == 'sunrgbd':
@@ -113,7 +113,7 @@ if __name__=='__main__':
         MODEL.dump_results(end_points, dump_dir, DC, True)
         print('Dumped detection results to folder %s'%(dump_dir))
 
-    if FLAGS.viz not None:
+    else:
         assert (FLAGS.dataset == 'blender'), "Visualization does only work for the blender dataset. If you want to use it for more, please implement first!"
         net.train()
         d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
