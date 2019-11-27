@@ -1,3 +1,3 @@
 #! /bin/bash
 
-python demo.py --dataset blender --num_point 15000
+python demo.py --viz vanillabackprop --sample 0

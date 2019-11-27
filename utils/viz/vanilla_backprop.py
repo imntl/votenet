@@ -30,8 +30,8 @@ class VanillaBackprop():
 
     def generate_gradients_votenet(self, sample, dataset_config):
         # Forward
-        inputs = {'point_clouds': sample['point_clouds']}
-        model_output = self.model(input)
+        sample = {'point_clouds': sample['point_clouds']}
+        model_output = self.model(sample)
         # Zero grads
         self.model.zero_grad()
         

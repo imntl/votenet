@@ -24,6 +24,7 @@ FLAGS = parser.parse_args()
 import torch
 import torch.nn as nn
 import torch.optim as optim
+from torch.utils.data import DataLoader
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 ROOT_DIR = BASE_DIR
@@ -52,7 +53,7 @@ if __name__=='__main__':
     demo_dir = os.path.join(BASE_DIR, 'demo_files') 
     if FLAGS.dataset == 'blender':
         sys.path.append(os.path.join(ROOT_DIR, 'blender'))
-        from blender_detection_dataset import DC # dataset config
+        from blender_detection_dataset import BlenderDetectionVotesDataset, DC # dataset config
         assert os.path.isfile(os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar')), "The checkpoint must be stored under {}".format(os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar'))
         checkpoint_path = os.path.join(demo_dir, 'pretrained_votenet_on_blender.tar')
         pc_path = os.path.join(demo_dir, 'input_pc_blender.ply')
@@ -84,7 +85,7 @@ if __name__=='__main__':
     
     # Load checkpoint
     optimizer = optim.Adam(net.parameters(), lr=0.001)
-    checkpoint = torch.load(checkpoint_path)
+    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
     net.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']
@@ -116,9 +117,10 @@ if __name__=='__main__':
     else:
         assert (FLAGS.dataset == 'blender'), "Visualization does only work for the blender dataset. If you want to use it for more, please implement first!"
         net.train()
-        d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
-        print(len(d))
-        sample = d[FLAGS.sample]
+        dataset = BlenderDetectionVotesDataset(root_dir='/storage/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
+        print(f"Dataset Length: {len(dataset)}")
+        sample = dataset[FLAGS.sample]
+
 
         if FLAGS.viz == "vanillabackprop":
             # Vanilla backprop
