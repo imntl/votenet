@@ -234,6 +234,7 @@ def write_ply_rgb(points, colors, out_filename, num_classes=None):
     fout.write('ply\nformat ascii 1.0\ncomment made by Max Jalea\nelement vertex {:d}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n'.format(N))
     for i in range(N):
         c = colors[i,:]
+        print(points.shape,c.shape)
         fout.write('%f %f %f %d %d %d\n' % (points[i,0],points[i,1],points[i,2],c[0],c[1],c[2]))
     fout.close()
 

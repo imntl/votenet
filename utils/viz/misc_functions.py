@@ -65,7 +65,7 @@ def save_gradient_pointcloud(pointcloud, gradient, file_name):
         gradient (np arr): Numpy array of the gradient with shape (3,N)
         file_name (str): File name to be exported
     """
-    if not os.pat.exists('results'):
+    if not os.path.exists('results'):
         os.makedirs('results')
     # Save ply
     path_to_file = os.path.join('results', 'pc_rgb' + file_name + '.ply')

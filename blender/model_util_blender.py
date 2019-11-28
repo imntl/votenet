@@ -21,16 +21,16 @@ class BlenderDatasetConfig(object): # Should work
         self.class2type = {self.type2class[t]:t for t in self.type2class}
         self.type2onehotclass={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'krones_1':7, 'krones_2':8, 'krones_3':9}
         self.type_mean_size = {
-                                'obj_1': np.array([2.680000,2.680000,0.490000]),
-                                'obj_2': np.array([1.799441,1.800000,1.400000]),
-                                'obj_3': np.array([0.555625,2.564100,0.560000]),
-                                'obj_4': np.array([1.799441,1.800000,1.800000]),
-                                'obj_5': np.array([0.840000,2.768000,2.000000]),
-                                'obj_6': np.array([0.888940,1.840990,2.746188]),
-                                'obj_7': np.array([2.055361,2.056000,1.760000]),
-                                'obj_8': np.array([0.932688,2.190081,1.948131]),
-                                'obj_9': np.array([2.340000,2.340000,0.520000]),
-                                'ritzel': np.array([1.129025,1.132590,3.078000]),
+                                'krones_1': np.array([2.544550,1.151976,1.964360]),
+                                'krones_2': np.array([2.482387,1.151976,1.962702]),
+                                'krones_3': np.array([2.942395,1.864898,1.118939]),
+                                'obj_1': np.array([2.766266,2.607390,2.206797]),
+                                'obj_2': np.array([3.439941,0.721894,0.045118]),
+                                'obj_3': np.array([1.964326,1.609607,1.257092]),
+                                'obj_4': np.array([2.667000,2.900947,1.334476]),
+                                'obj_5': np.array([2.767263,2.967790,1.143836]),
+                                'obj_6': np.array([3.448919,3.448919,0.300789]),
+                                'ritzel': np.array([0.726274,0.728566,1.980000]),
                         }
 
         self.mean_size_arr = np.zeros((self.num_size_cluster, 3))

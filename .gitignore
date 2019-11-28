@@ -120,6 +120,7 @@ dmypy.json
 # End of https://www.gitignore.io/api/python,visualstudiocode
 
 /data
+/results
 *__pycache__*
 /log_*
 /sunrgbd/sunrgbd_pc_bbox_votes_50k_v1_train/
