@@ -85,7 +85,7 @@ if __name__=='__main__':
     
     # Load checkpoint
     optimizer = optim.Adam(net.parameters(), lr=0.001)
-    checkpoint = torch.load(checkpoint_path, map_location=torch.device('cpu'))
+    checkpoint = torch.load(checkpoint_path, map_location=device)
     net.load_state_dict(checkpoint['model_state_dict'])
     optimizer.load_state_dict(checkpoint['optimizer_state_dict'])
     epoch = checkpoint['epoch']

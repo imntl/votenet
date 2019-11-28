@@ -17,9 +17,9 @@ class BlenderDatasetConfig(object): # Should work
         self.num_heading_bin = 12
         self.num_size_cluster = 10
 
-        self.type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'obj_7':7, 'obj_8':8, 'obj_9':9}
+        self.type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'krones_1':7, 'krones_2':8, 'krones_3':9}
         self.class2type = {self.type2class[t]:t for t in self.type2class}
-        self.type2onehotclass={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'obj_7':7, 'obj_8':8, 'obj_9':9}
+        self.type2onehotclass={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'krones_1':7, 'krones_2':8, 'krones_3':9}
         self.type_mean_size = {
                                 'obj_1': np.array([2.680000,2.680000,0.490000]),
                                 'obj_2': np.array([1.799441,1.800000,1.400000]),

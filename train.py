@@ -394,4 +394,4 @@ if __name__=='__main__':
     if FLAGS.log_dir is not 'log':
         data.zip_up(FLAGS.log_dir)
     if FLAGS.dump_dir is not None:
-        data.zip_up(Flags.dump_dir)
+        data.zip_up(FLAGS.dump_dir)
