@@ -81,6 +81,7 @@ if __name__=='__main__':
         num_heading_bin=DC.num_heading_bin,
         num_size_cluster=DC.num_size_cluster,
         mean_size_arr=DC.mean_size_arr).to(device)
+    criterion = MODEL.get_loss
     print('Constructed model.')
     
     # Load checkpoint
@@ -118,15 +119,20 @@ if __name__=='__main__':
         assert (FLAGS.dataset == 'blender'), "Visualization does only work for the blender dataset. If you want to use it for more, please implement first!"
         net.train()
         dataset = BlenderDetectionVotesDataset(root_dir='/storage/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
-        print(f"Dataset Length: {len(dataset)}")
-        sample = dataset[FLAGS.sample]
-
+        dataloader = DataLoader(dataset, batch_size=1, shuffle=False, num_workers=1)
+        print(f"Dataset Length: {len(dataset)} Dataloader Length: {len(dataloader)}")
+        for batch_idx, batch in enumerate(dataloader):
+            if batch_idx == FLAGS.sample:
+                sample = batch
+                break
+        sample['point_clouds'] = torch.from_numpy(preprocess_point_cloud(sample['point_clouds'][0].numpy()))
+        sample['point_clouds'].requires_grad = True
 
         if FLAGS.viz == "vanillabackprop":
             # Vanilla backprop
             VBP = VanillaBackprop(net)
             # Generate gradients
-            vanilla_grads = VBP.generate_gradients_votenet(sample,DC)
+            vanilla_grads = VBP.generate_gradients_votenet(sample,DC,criterion,device)
             # Save colord gradients
             helper.save_gradient_pointcloud(sample['point_clouds'], vanilla_grads, 'vanilla')
             print('Vanilla backprop completed')

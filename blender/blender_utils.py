@@ -20,7 +20,7 @@ import scipy.io as sio # to load .mat files for depth points
 # Added for Blender
 from skimage import io, transform
 
-type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'obj_7':7, 'obj_8':8, 'obj_9':9}
+type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'krones_1':7, 'krones_2':8, 'krones_3':9}
 class2type = {type2class[t]:t for t in type2class}
 
 

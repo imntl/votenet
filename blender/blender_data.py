@@ -28,7 +28,7 @@ import blender_utils
 
 from tqdm import tqdm 
 
-DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','obj_7','obj_8','obj_9']
+DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','krones_1','krones_2','krones_3']
 
 class blender_object(object):
     ''' Load and parse object data '''
