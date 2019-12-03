@@ -240,5 +240,6 @@ if __name__=='__main__': # Run the different things implemented in this file.
         extract_blender_data(args.data_dir, split = 'test', save_votes = True)
 
     if args.gen_data_multi:
-    #    extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True)
+        import time
+        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True)
         extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)

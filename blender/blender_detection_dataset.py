@@ -303,9 +303,9 @@ def get_sem_cls_statistics():
     print(sem_cls_cnt)
 
 if __name__=='__main__':
-    d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
+    d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc6')
     print(len(d))
-    sample = d[0]
+    sample = d[1338]
     print(sample['point_clouds'].shape, sample['vote_label'].shape, sample['vote_label_mask'].shape)
     pc_util.write_ply(sample['point_clouds'], 'pc.ply')
     shape = sample['point_clouds'].shape
