@@ -368,8 +368,7 @@ def train(start_epoch):
         train_one_epoch()
         training_time = (timer() - start_epoch)/60
         TRAIN_VISUALIZER.log_scalar("Time for epoch",training_time,epoch) # label, value, step
-#        if EPOCH_CNT == 0 or EPOCH_CNT % 10 == 9: # Eval every 10 epochs # CHANGES
-        if EPOCH_CNT == 0 or EPOCH_CNT % 1 == 0: # Eval every 10 epochs
+        if EPOCH_CNT == 0 or EPOCH_CNT % 10 == 9: # Eval every 10 epochs
             start_eval = timer()
             print("****** EVAL ******")
             loss = evaluate_one_epoch()
