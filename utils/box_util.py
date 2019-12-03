@@ -194,7 +194,7 @@ def roty(t):
 def new_rotx(t):
     """Rotation about the x-axis."""
     if type(t) is not float:
-        t = -t[1]
+        t = t[0]
     c = np.cos(t)
     s = np.sin(t)
     return np.array([[1,  0,  0],
@@ -205,7 +205,7 @@ def new_rotx(t):
 def new_roty(t):
     """Rotation about the y-axis."""
     if type(t) is not float:
-        t = t[0]
+        t = t[1]
     c = np.cos(t)
     s = np.sin(t)
     return np.array([[c,  0,  s],
