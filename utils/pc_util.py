@@ -234,8 +234,16 @@ def write_ply_rgb(points, colors, out_filename, num_classes=None):
     fout.write('ply\nformat ascii 1.0\ncomment made by Max Jalea\nelement vertex {:d}\nproperty float x\nproperty float y\nproperty float z\nproperty uchar red\nproperty uchar green\nproperty uchar blue\nend_header\n'.format(N))
     for i in range(N):
         c = colors[i,:]
-        print(points.shape,c.shape)
         fout.write('%f %f %f %d %d %d\n' % (points[i,0],points[i,1],points[i,2],c[0],c[1],c[2]))
+    fout.close()
+
+def write_pcd(points, out_filename, num_classes=None):
+    """ (N,3) points as pcd file """
+    N = points.shape[0]
+    fout = open(out_filename, 'w')
+    fout.write(f'# .PCD v0.7 - Point Cloud Data file format\nVERSION 0.7\nFIELDS x y z\nSIZE 4 4 4\nTYPE F F F\nCOUNT 1 1 1\nWIDTH {N}\nHEIGHT 1\nVIEWPOINT 0 0 0 1 0 0 0\nPOINTS {N}\nDATA ascii\n')
+    for i in range(N):
+        fout.write('%f %f %f\n' % (float(points[i,0]),float(points[i,1]),float(points[i,2])))
     fout.close()
 
 # ----------------------------------------

@@ -28,6 +28,9 @@ import blender_utils
 
 from tqdm import tqdm 
 
+import plyfile
+import open3d as o3d
+
 DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','krones_1','krones_2','krones_3']
 
 class blender_object(object):
@@ -223,11 +226,42 @@ def get_box3d_dim_statistics(data_dir, split = 'train', # Computes the median bo
         print("\'%s\': np.array([%f,%f,%f])," % \
             (class_type, median_box3d[0]*2, median_box3d[1]*2, median_box3d[2]*2))
 
+def extract_pointcloud_ply(data_dir):
+    num_point = 80000
+    for filename in tqdm(os.listdir(data_dir)):
+        if filename.endswith(".ply"):
+            name = filename.split('.')[:-1][0]
+            ply = plyfile.PlyData.read(os.path.join(data_dir,filename)).elements[0].data
+            pc = np.zeros((ply['x'].shape[0],3))
+            print(name)
+            pc[:,0] = ply['x']
+            pc[:,1] = ply['y']
+            pc[:,2] = ply['z']
+            print("Before cut:", pc.shape)
+            pc = ply_cut(pc,ply['z'])
+            print("After cut:", pc.shape)
+            pc_o3d = o3d.geometry.PointCloud()
+            pc_o3d.points = o3d.utility.Vector3dVector(pc)
+            voxel_down = pc_o3d.voxel_down_sample(voxel_size=0.002)
+            cl,ind = voxel_down.remove_statistical_outlier(nb_neighbors=500,std_ratio=.02)
+            pc = np.asarray(voxel_down.points)
+            print("After Filtering:", pc.shape)
+            assert pc.shape[1] > 0, "Es gibt keine Datenpunkte in der Pointcloud"
+            pc_upright_depth_subsampled = pc_util.random_sampling(pc, num_point)
+            np.savez_compressed(os.path.join(data_dir, '{:04d}_pc.npz'.format(int(name))), pc=pc_upright_depth_subsampled)
+            pc_util.write_ply(pc_upright_depth_subsampled, os.path.join(data_dir, '{:04d}_new.ply'.format(int(name))))
+
+def ply_cut(pc,z):
+    mask = (z > -1)
+    pc = pc[mask,:]
+    return pc
+
 if __name__=='__main__': # Run the different things implemented in this file.
     parser = argparse.ArgumentParser()
     parser.add_argument('--compute_median_size', action='store_true', help='Compute median 3D bounding box sizes for each class.')
     parser.add_argument('--gen_data', action='store_true', help='Generate dataset.')
     parser.add_argument('--gen_data_multi', action='store_true', help='Generate dataset with multiple processor cores.')
+    parser.add_argument('--gen_ply_data', action='store_true', help='Generate dataset with data out of ply files.')
     parser.add_argument('--data_dir', default='/storage/data/blender_full/abc6/', help='Path to dataset.')
     args = parser.parse_args()
 
@@ -243,3 +277,6 @@ if __name__=='__main__': # Run the different things implemented in this file.
         import time
         extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True)
         extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)
+    
+    if args.gen_ply_data:
+        extract_pointcloud_ply(args.data_dir)
