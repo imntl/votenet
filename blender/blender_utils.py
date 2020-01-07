@@ -256,6 +256,12 @@ def load_depth_image(img_filename,calib):
     depth_pc = calib.project_camera_to_global(depth_pc)
     return depth_pc
 
+def load_seg_image(img_filename):
+    im = io.imread(img_filename)
+    seg = (im > 230)
+    seg = np.array(seg)
+    return seg
+
 def load_depth_points(depth_filename):
     depth = np.loadtxt(depth_filename)
     return depth

@@ -304,7 +304,7 @@ def get_sem_cls_statistics():
 
 if __name__=='__main__':
     #d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='reza',split_set='train')
-    d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/pictures/', use_height=False, augment=False, data_folder='blender_test',split_set='train')
+    d = BlenderDetectionVotesDataset(root_dir='/tmp', use_height=False, augment=False, data_folder='dataset',split_set='train')
     print(len(d))
     for i in range(len(d)):
         sample = d[i]
