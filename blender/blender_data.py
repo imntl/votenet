@@ -102,11 +102,11 @@ def extract_blender_data(data_dir, split = 'train', num_point=20000, # Extracs d
     dataset = blender_object(data_dir,split=split)
 
     for data_idx in tqdm(range(len(dataset))):
-        extract_blender_data_inner(data_idx,dataset,data_dir,split,num_point,type_whitelist,save_votes, False)
+        extract_blender_data_inner(data_idx,dataset,data_dir,split,num_point,type_whitelist,save_votes, False, False)
    
 
 def extract_blender_data_multi(data_dir, split = 'train', num_point=20000, # Extracs data to .npz and .npy
-    type_whitelist=DEFAULT_TYPE_WHITELIST, save_votes=True, seg_data=False, filtering=False):
+    type_whitelist=DEFAULT_TYPE_WHITELIST, save_votes=True, seg_data=False, filtering=False, augmentation=False):
     """ Extract scene point clouds and 
     bounding boxes (centroids, box sizes, heading angles, semantic classes).
     Dumped point clouds and boxes are in upright depth coord.
@@ -131,10 +131,10 @@ def extract_blender_data_multi(data_dir, split = 'train', num_point=20000, # Ext
     import multiprocessing
 
     num_cores = multiprocessing.cpu_count()
-    test = Parallel(n_jobs=num_cores)(delayed(extract_blender_data_inner)(idx, dataset, data_dir, split, num_point, type_whitelist, save_votes, seg_data, filtering) for idx in tqdm(range(len(dataset))))
+    test = Parallel(n_jobs=num_cores)(delayed(extract_blender_data_inner)(idx, dataset, data_dir, split, num_point, type_whitelist, save_votes, seg_data, filtering, augmentation) for idx in tqdm(range(len(dataset))))
     assert all(i == 0 for i in test), "Ein Unterprozess ist kaputt gegangen"
 
-def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, type_whitelist, save_votes, seg_data, filtering):
+def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, type_whitelist, save_votes, seg_data, filtering, augmentation):
     idx = dataset.index[data_idx]
     # Skip if XX/XXXX_votes.npz already exists
     if os.path.exists(os.path.join(data_dir, split, '{:02d}/{:04d}_votes.npz'.format(idx[0],idx[1]))): return 0
@@ -195,7 +195,22 @@ def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, typ
         pc_upright_depth = cloud.to_array()
         print("After filtering", pc_upright_depth.shape)
 
-    pc_util.write_ply(pc_upright_depth,'after_filtering.ply')
+    if augmentation:
+        #PCL resampling (smoothing)
+        cloud = pcl.Pointcloud()
+        cloud.from_list(pc_upright_depth)
+        # Create KD-Tree
+        tree = cloud.make_kdtree()
+        # Reconstruct
+        mls = cloud.make_moving_least_squares()
+        mls.set_Compute_Normals(True)
+        mls.set_polynomial_fit(True)
+        mls.set_Search_Method(tree)
+        mls.set_search_radius(0.03)
+        mls_points = mls.process()
+        pc_upright_depth = mls_points.to_array()
+
+    pc_util.write_ply(pc_upright_depth,'after.ply')
     pc_upright_depth_subsampled = pc_util.random_sampling(pc_upright_depth, num_point)
 
     np.savez_compressed(os.path.join(data_dir, split, '{:02d}/{:04d}_pc.npz'.format(idx[0],idx[1])), pc=pc_upright_depth_subsampled)
@@ -325,8 +340,8 @@ if __name__=='__main__': # Run the different things implemented in this file.
         extract_blender_data(args.data_dir, split = 'test', save_votes = True)
 
     if args.gen_data_multi:
-        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False)
-        extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True, seg_data=False)
+        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=True, augmentation=True)
+        #extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=True, augmentation=True)
     
     if args.gen_ply_data:
         extract_pointcloud_ply(args.data_dir)
