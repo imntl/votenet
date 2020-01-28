@@ -179,7 +179,7 @@ print("Length Datasets:", len(TRAIN_DATASET), len(TEST_DATASET))
 TRAIN_DATALOADER = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE,
     shuffle=True, num_workers=4, worker_init_fn=my_worker_init_fn)
 TEST_DATALOADER = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE,
-    shuffle=True, num_workers=4, worker_init_fn=my_worker_init_fn)
+    shuffle=True, num_workers=0, worker_init_fn=my_worker_init_fn) # CHANGES
 print("Length Dataloader:", len(TRAIN_DATALOADER), len(TEST_DATALOADER))
 
 # Init the model and optimzier
@@ -394,4 +394,4 @@ if __name__=='__main__':
     if FLAGS.log_dir is not 'log':
         data.zip_up(FLAGS.log_dir)
     if FLAGS.dump_dir is not None:
-        data.zip_up(Flags.dump_dir)
+        data.zip_up(FLAGS.dump_dir)

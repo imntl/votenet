@@ -20,7 +20,10 @@ import scipy.io as sio # to load .mat files for depth points
 # Added for Blender
 from skimage import io, transform
 
-type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'obj_7':7, 'obj_8':8, 'obj_9':9}
+#type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'krones_1':7, 'krones_2':8, 'krones_3':9}
+#type2class={'krones_1':0, 'krones_3':1, 'nothing':2}
+type2class={'krones_1':0, 'krones_2':1, 'krones_3':2, 'nothing':3}
+#type2class={'krones_1':0, 'krones_3':1}
 class2type = {type2class[t]:t for t in type2class}
 
 
@@ -228,7 +231,7 @@ def load_depth_image_old(img_filename,calib):
     uv_depth = []
     for index_y, row in enumerate(im):
         for index_x,value in enumerate(row):
-            uv_depth.append([index_x,index_y,-(((value/65536)*10)+1)])
+            uv_depth.append([index_x,index_y,-(((value/65536)*10))])
     uv_depth = np.array(uv_depth)
     depth_pc = calib.project_image_to_camera(uv_depth)
     depth_pc = calib.project_camera_to_global(depth_pc)
@@ -239,22 +242,31 @@ def load_depth_image(img_filename,calib):
     pic_3d = []
     for index_y, row in enumerate(im):
         for index_x, value in enumerate(row):
-            depth = ((value/65536)*10)+1
+            #depth = ((value/65536)*10)+1 # bis abc6
+            #depth = ((value/65536)*4) # aktuelle Blenderrenderings
+            depth = ((value/65536)*1) # iPhone
             x = -((0.5 - (float(index_x) / float(calib.c_u * 2))) / calib.f_u)
-            y = ((0.5 - (float(index_y) / float(calib.c_u * 2))) / calib.f_u)
+            y = ((0.5 - (float(index_y) / float(calib.c_v * 2))) / calib.f_v)
             #x = ((index_x - calib.c_u) * z / calib.f_u)
             #y = ((index_y - calib.c_v) * z / calib.f_v)
             z = -1.0
             norm = np.sqrt(x**2 + y**2 + z**2)
             if depth != 0:
                 x = depth * x * 2 * calib.c_u / norm
-                y = depth * y * 2 * calib.c_u / norm
+                y = depth * y * 2 * calib.c_v / norm
+                #y = depth * y * 2 * calib.c_u / norm
                 z = depth * z / norm
                 pic_3d.append([x,y,z])
 
     depth_pc = np.array(pic_3d)
     depth_pc = calib.project_camera_to_global(depth_pc)
     return depth_pc
+
+def load_seg_image(img_filename):
+    im = io.imread(img_filename)
+    seg = (im > 230)
+    seg = np.array(seg)
+    return seg
 
 def load_depth_points(depth_filename):
     depth = np.loadtxt(depth_filename)

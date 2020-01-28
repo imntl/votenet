@@ -25,8 +25,28 @@ class VanillaBackprop():
             self.gradients = grad_in[0]
 
         # Register hook to the first layer
-        first_layer = list(self.model.features._modules.items())[0][1]
+        first_layer = self.model.backbone_net.sa1.mlp_module.layer0.conv
         first_layer.register_backward_hook(hook_function)
+
+    def generate_gradients_votenet(self, sample, dataset_config, loss_func, device):
+        for key in sample:
+            sample[key] = sample[key].to(device)
+        # Forward
+        inputs = {'point_clouds': sample['point_clouds']}
+        model_output = self.model(inputs)
+        # Zero grads
+        self.model.zero_grad()
+        
+        # Backward pass
+        for key in sample:
+            assert(key not in model_output)
+            model_output[key] = sample[key]
+        loss, end_points = loss_func(model_output, dataset_config)
+        loss.backward()
+        # Convert Pytorch variable to numpy array
+        # [0] to get rid of the first channel (1,3,224,224)
+        gradients_as_arr = self.gradients.data.cpu().numpy()[0]
+        return gradients_as_arr
 
     def generate_gradients(self, input_image, target_class):
         # Forward

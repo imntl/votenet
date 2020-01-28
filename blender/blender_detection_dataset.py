@@ -303,11 +303,18 @@ def get_sem_cls_statistics():
     print(sem_cls_cnt)
 
 if __name__=='__main__':
-    d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='abc_test')
+    #d = BlenderDetectionVotesDataset(root_dir='/home/jalea/data/blender_full/', use_height=False, augment=False, data_folder='reza',split_set='train')
+    d = BlenderDetectionVotesDataset(root_dir='/tmp', use_height=False, augment=False, data_folder='dataset',split_set='train')
     print(len(d))
-    sample = d[0]
-    print(sample['point_clouds'].shape, sample['vote_label'].shape, sample['vote_label_mask'].shape)
-    pc_util.write_ply(sample['point_clouds'], 'pc.ply')
-    viz_box(sample)
-    viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
-    viz_obb(sample['point_clouds'], sample['center_label'], sample['box_label_mask'], sample['heading_class_label'], sample['heading_residual_label'], sample['size_class_label'], sample['size_residual_label'])
+    for i in range(len(d)):
+        sample = d[i]
+        print(sample['point_clouds'].shape, sample['vote_label'].shape, sample['vote_label_mask'].shape)
+        pc_util.write_ply(sample['point_clouds'], f'pc{i}.ply')
+        #pc_util.write_pcd(sample['point_clouds'], f'pc{i}.pcd')
+#        shape = sample['point_clouds'].shape
+#        color = np.zeros(shape)
+#        color[:,1] = 255
+#        pc_util.write_ply_rgb(sample['point_clouds'], color, 'pc_rgb.ply')
+#        viz_box(sample)
+#        viz_votes(sample['point_clouds'], sample['vote_label'], sample['vote_label_mask'])
+#        viz_obb(sample['point_clouds'], sample['center_label'], sample['box_label_mask'], sample['heading_class_label'], sample['heading_residual_label'], sample['size_class_label'], sample['size_residual_label'])
