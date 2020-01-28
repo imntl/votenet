@@ -23,7 +23,7 @@ from ap_helper import APCalculator, parse_predictions, parse_groundtruths
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--model', default='votenet', help='Model file name [default: votenet]')
-parser.add_argument('--dataset', default='sunrgbd', help='Dataset name. sunrgbd or scannet. [default: sunrgbd]')
+parser.add_argument('--dataset', default='blender', help='Dataset name. sunrgbd or scannet. [default: blender]')
 parser.add_argument('--checkpoint_path', default=None, help='Model checkpoint path [default: None]')
 parser.add_argument('--dump_dir', default=None, help='Dump dir to save sample outputs [default: None]')
 parser.add_argument('--num_point', type=int, default=20000, help='Point Number [default: 20000]')
@@ -43,6 +43,7 @@ parser.add_argument('--nms_iou', type=float, default=0.25, help='NMS IoU thresho
 parser.add_argument('--conf_thresh', type=float, default=0.05, help='Filter out predictions with obj prob less than it. [default: 0.05]')
 parser.add_argument('--faster_eval', action='store_true', help='Faster evaluation by skippling empty bounding box removal.')
 parser.add_argument('--shuffle_dataset', action='store_true', help='Shuffle the dataset (random order).')
+parser.add_argument('--dataset_folder', default='abc6_small', help='Dataset Folder for blender dataset.')
 FLAGS = parser.parse_args()
 
 if FLAGS.use_cls_nms:
@@ -70,7 +71,13 @@ def log_string(out_str):
 def my_worker_init_fn(worker_id):
     np.random.seed(np.random.get_state()[1][0] + worker_id)
 
-if FLAGS.dataset == 'sunrgbd':
+if FLAGS.dataset == 'blender':
+    sys.path.append(os.path.join(ROOT_DIR, 'blender'))
+    from blender_detection_dataset import BlenderDetectionVotesDataset, MAX_NUM_OBJ
+    from model_util_blender import BlenderDatasetConfig
+    DATASET_CONFIG = BlenderDatasetConfig()
+    TEST_DATASET = BlenderDetectionVotesDataset(data_folder=FLAGS.dataset_folder, root_dir='/storage/data/blender_full/',split_set='train', augment=False, use_height=(not FLAGS.no_height)) # TODO: Change split_set to test
+elif FLAGS.dataset == 'sunrgbd':
     sys.path.append(os.path.join(ROOT_DIR, 'sunrgbd'))
     from sunrgbd_detection_dataset import SunrgbdDetectionVotesDataset, MAX_NUM_OBJ
     from model_util_sunrgbd import SunrgbdDatasetConfig

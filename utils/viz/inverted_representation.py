@@ -54,7 +54,7 @@ class InvertedRepresentation():
             but this one is simpler (I think)
         """
         layer_output = None
-        for index, layer in enumerate(self.model.features):
+        for index, layer in enumerate(self.model.backbone_net):
             x = layer(x)
             if str(index) == str(layer_id):
                 layer_output = x[0]

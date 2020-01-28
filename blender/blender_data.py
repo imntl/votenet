@@ -27,8 +27,13 @@ import pc_util
 import blender_utils
 
 from tqdm import tqdm 
+import pcl
 
-DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','obj_7','obj_8','obj_9']
+import plyfile
+
+DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','krones_1','krones_2','krones_3','nothing']
+#DEFAULT_TYPE_WHITELIST = ['krones_1','krones_3']
+#DEFAULT_TYPE_WHITELIST = ['krones_1','krones_2','krones_3']
 
 class blender_object(object):
     ''' Load and parse object data '''
@@ -60,6 +65,19 @@ class blender_object(object):
     def get_label_objects(self, idx):
         label_filename = os.path.join(self.split_dir, "{:02d}".format(self.index[idx][0]), "label{:04d}.txt".format(self.index[idx][1]))
         return blender_utils.read_blender_label(label_filename)
+    
+    def get_segmentation(self, idx):
+        seg_filename = os.path.join(self.split_dir, "{:02d}".format(self.index[idx][0]), "index{:04d}.png".format(self.index[idx][1]))
+        img = blender_utils.load_seg_image(seg_filename)
+        tf_mat = (img > 230)
+        seg = tf_mat
+        for idx_i, i in enumerate(seg):
+            for idx_j, j in enumerate(i):
+                if j:
+                    tf_mat[idx_i,idx_j] = self.get_label_objects(idx)
+                else:
+                    tf_mat[idx_i,idx_j] = None
+        return seg
 
 def extract_blender_data(data_dir, split = 'train', num_point=20000, # Extracs data to .npz and .npy
     type_whitelist=DEFAULT_TYPE_WHITELIST, save_votes=True):
@@ -84,11 +102,11 @@ def extract_blender_data(data_dir, split = 'train', num_point=20000, # Extracs d
     dataset = blender_object(data_dir,split=split)
 
     for data_idx in tqdm(range(len(dataset))):
-        extract_blender_data_inner(data_idx,dataset,data_dir,split,num_point,type_whitelist,save_votes)
+        extract_blender_data_inner(data_idx,dataset,data_dir,split,num_point,type_whitelist,save_votes, False)
    
 
 def extract_blender_data_multi(data_dir, split = 'train', num_point=20000, # Extracs data to .npz and .npy
-    type_whitelist=DEFAULT_TYPE_WHITELIST, save_votes=True):
+    type_whitelist=DEFAULT_TYPE_WHITELIST, save_votes=True, seg_data=False, filtering=False):
     """ Extract scene point clouds and 
     bounding boxes (centroids, box sizes, heading angles, semantic classes).
     Dumped point clouds and boxes are in upright depth coord.
@@ -113,10 +131,10 @@ def extract_blender_data_multi(data_dir, split = 'train', num_point=20000, # Ext
     import multiprocessing
 
     num_cores = multiprocessing.cpu_count()
-    test = Parallel(n_jobs=num_cores)(delayed(extract_blender_data_inner)(idx, dataset, data_dir, split, num_point, type_whitelist, save_votes) for idx in tqdm(range(len(dataset))))
+    test = Parallel(n_jobs=num_cores)(delayed(extract_blender_data_inner)(idx, dataset, data_dir, split, num_point, type_whitelist, save_votes, seg_data, filtering) for idx in tqdm(range(len(dataset))))
     assert all(i == 0 for i in test), "Ein Unterprozess ist kaputt gegangen"
 
-def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, type_whitelist, save_votes):
+def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, type_whitelist, save_votes, seg_data, filtering):
     idx = dataset.index[data_idx]
     # Skip if XX/XXXX_votes.npz already exists
     if os.path.exists(os.path.join(data_dir, split, '{:02d}/{:04d}_votes.npz'.format(idx[0],idx[1]))): return 0
@@ -148,10 +166,39 @@ def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, typ
 
     pc_upright_depth = dataset.get_depth(data_idx)
     assert pc_upright_depth.shape[1] > 0, "Es gibt keine Datenpunkte in der Pointcloud"
+    if filtering:
+#        pc_util.write_ply(pc_upright_depth,'before_filtering.ply')
+        print("Before filtering", pc_upright_depth.shape)
+        # Passthrough filter
+        pc_min = np.min(pc_upright_depth[:,2])
+        pc_max = np.max(pc_upright_depth[:,2])
+        print(f"PCMin: {pc_min} PCMax: {pc_max}")
+#        if pc_max-pc_min > 0.1:
+#            #mask = (pc_upright_depth[:,2] > pc_max-((pc_max-pc_min)/1.2))
+#            mask = (pc_upright_depth[:,2] > pc_max-0.05)
+#        else:
+#            mask = (pc_upright_depth[:,2] > 1)
+#        pc_fil1 = pc_upright_depth[mask,:]
+
+        # PCL Filter
+        cloud = pcl.PointCloud()
+        cloud.from_list(pc_upright_depth)
+        # VoxelGrid Filter
+        vox_grid = cloud.make_voxel_grid_filter()
+        vox_grid.set_leaf_size(0.002,0.002,0.002)
+        cloud = vox_grid.filter()
+        # Statistical Outlier Removal filter
+        #stat_out_remove = cloud.make_statistical_outlier_filter()
+        #stat_out_remove.set_mean_k(100)
+        #stat_out_remove.set_std_dev_mul_thresh(10.0)
+        #cloud = stat_out_remove.filter()
+        pc_upright_depth = cloud.to_array()
+        print("After filtering", pc_upright_depth.shape)
+
+    pc_util.write_ply(pc_upright_depth,'after_filtering.ply')
     pc_upright_depth_subsampled = pc_util.random_sampling(pc_upright_depth, num_point)
 
-    np.savez_compressed(os.path.join(data_dir, split, '{:02d}/{:04d}_pc.npz'.format(idx[0],idx[1])),
-            pc=pc_upright_depth_subsampled)
+    np.savez_compressed(os.path.join(data_dir, split, '{:02d}/{:04d}_pc.npz'.format(idx[0],idx[1])), pc=pc_upright_depth_subsampled)
     np.save(os.path.join(data_dir, split, '{:02d}/{:04d}_bbox.npy'.format(idx[0],idx[1])), obbs)
    
     if save_votes:
@@ -179,9 +226,16 @@ def extract_blender_data_inner(data_idx,dataset, data_dir, split, num_point, typ
                         point_votes[j,7:10] = votes[i,:]
                 point_vote_idx[inds] = np.minimum(2, point_vote_idx[inds]+1)
             except:
+                raise
                 print('ERROR ----',  data_idx, obj.classname)
         np.savez_compressed(os.path.join(data_dir, split, '{:02d}/{:04d}_votes.npz'.format(idx[0],idx[1])),
             point_votes = point_votes)
+
+    if seg_data:
+        seg_mask = dataset.get_segmentation(data_idx)
+        assert seg_mask.shape[1] > 0, "There is no data in the segmentation mask provided"
+        np.savez_compressed(os.path.join(data_dir, split, '{:02d}/{:04d}_label.npz'.format(idx[0],idx[1])),pc=seg_mask)
+
     return 0
 
 def get_box3d_dim_statistics(data_dir, split = 'train', # Computes the median box size for  BlenderDatasetConfig.type_mean_size
@@ -223,11 +277,42 @@ def get_box3d_dim_statistics(data_dir, split = 'train', # Computes the median bo
         print("\'%s\': np.array([%f,%f,%f])," % \
             (class_type, median_box3d[0]*2, median_box3d[1]*2, median_box3d[2]*2))
 
+def extract_pointcloud_ply(data_dir):
+    num_point = 80000
+    for filename in tqdm(os.listdir(data_dir)):
+        if filename.endswith(".ply"):
+            name = filename.split('.')[:-1][0]
+            ply = plyfile.PlyData.read(os.path.join(data_dir,filename)).elements[0].data
+            pc = np.zeros((ply['x'].shape[0],3))
+            print(name)
+            pc[:,0] = ply['x']
+            pc[:,1] = ply['y']
+            pc[:,2] = ply['z']
+            print("Before cut:", pc.shape)
+            pc = ply_cut(pc,ply['z'])
+            print("After cut:", pc.shape)
+            #pc_o3d = o3d.geometry.PointCloud()
+            #pc_o3d.points = o3d.utility.Vector3dVector(pc)
+            #voxel_down = pc_o3d.voxel_down_sample(voxel_size=0.002)
+            #cl,ind = voxel_down.remove_statistical_outlier(nb_neighbors=500,std_ratio=.02)
+            #pc = np.asarray(voxel_down.points)
+            print("After Filtering:", pc.shape)
+            assert pc.shape[1] > 0, "Es gibt keine Datenpunkte in der Pointcloud"
+            pc_upright_depth_subsampled = pc_util.random_sampling(pc, num_point)
+            np.savez_compressed(os.path.join(data_dir, '{:04d}_pc.npz'.format(int(name))), pc=pc_upright_depth_subsampled)
+            pc_util.write_ply(pc_upright_depth_subsampled, os.path.join(data_dir, '{:04d}_new.ply'.format(int(name))))
+
+def ply_cut(pc,z):
+    mask = (z > -1)
+    pc = pc[mask,:]
+    return pc
+
 if __name__=='__main__': # Run the different things implemented in this file.
     parser = argparse.ArgumentParser()
     parser.add_argument('--compute_median_size', action='store_true', help='Compute median 3D bounding box sizes for each class.')
     parser.add_argument('--gen_data', action='store_true', help='Generate dataset.')
     parser.add_argument('--gen_data_multi', action='store_true', help='Generate dataset with multiple processor cores.')
+    parser.add_argument('--gen_ply_data', action='store_true', help='Generate dataset with data out of ply files.')
     parser.add_argument('--data_dir', default='/storage/data/blender_full/abc6/', help='Path to dataset.')
     args = parser.parse_args()
 
@@ -240,5 +325,8 @@ if __name__=='__main__': # Run the different things implemented in this file.
         extract_blender_data(args.data_dir, split = 'test', save_votes = True)
 
     if args.gen_data_multi:
-        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True)
-    #    extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True)
+        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False)
+        extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True, seg_data=False)
+    
+    if args.gen_ply_data:
+        extract_pointcloud_ply(args.data_dir)
