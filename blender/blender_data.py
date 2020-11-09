@@ -342,7 +342,7 @@ if __name__=='__main__': # Run the different things implemented in this file.
 
     if args.gen_data_multi:
         extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=False, augmentation=False)
-        #extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=True, augmentation=True)
+        extract_blender_data_multi(args.data_dir, split = 'test', save_votes = True, seg_data=False, filtering=True, augmentation=False)
     
     if args.gen_ply_data:
         extract_pointcloud_ply(args.data_dir)
