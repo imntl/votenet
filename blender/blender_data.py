@@ -31,9 +31,10 @@ import pcl
 
 import plyfile
 
-DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','krones_1','krones_2','krones_3','nothing']
+#DEFAULT_TYPE_WHITELIST = ['ritzel','obj_1','obj_2','obj_3','obj_4','obj_5','obj_6','krones_1','krones_2','krones_3','nothing']
 #DEFAULT_TYPE_WHITELIST = ['krones_1','krones_3']
 #DEFAULT_TYPE_WHITELIST = ['krones_1','krones_2','krones_3']
+DEFAULT_TYPE_WHITELIST = ['0902438520','0903855077','0900889240','0902008177','0903550436','0902354883']
 
 class blender_object(object):
     ''' Load and parse object data '''
@@ -340,7 +341,7 @@ if __name__=='__main__': # Run the different things implemented in this file.
         extract_blender_data(args.data_dir, split = 'test', save_votes = True)
 
     if args.gen_data_multi:
-        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=True, augmentation=True)
+        extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=False, augmentation=False)
         #extract_blender_data_multi(args.data_dir, split = 'train', save_votes = True, seg_data=False, filtering=True, augmentation=True)
     
     if args.gen_ply_data:
