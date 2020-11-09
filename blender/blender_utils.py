@@ -22,7 +22,8 @@ from skimage import io, transform
 
 #type2class={'ritzel':0, 'obj_1':1, 'obj_2':2, 'obj_3':3, 'obj_4':4, 'obj_5':5, 'obj_6':6, 'krones_1':7, 'krones_2':8, 'krones_3':9}
 #type2class={'krones_1':0, 'krones_3':1, 'nothing':2}
-type2class={'krones_1':0, 'krones_2':1, 'krones_3':2, 'nothing':3}
+#type2class={'krones_1':0, 'krones_2':1, 'krones_3':2, 'nothing':3}
+type2class={'0902438520':0,'0903855077':1,'0900889240':2,'0902008177':3,'0903550436':4,'0902354883':5}
 #type2class={'krones_1':0, 'krones_3':1}
 class2type = {type2class[t]:t for t in type2class}
 
